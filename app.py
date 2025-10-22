@@ -9,6 +9,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 from flask import Flask, render_template, request, jsonify, send_from_directory
+from flask_cors import CORS
 from werkzeug.utils import secure_filename
 import google.generativeai as genai
 from PIL import Image
@@ -19,6 +20,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
+CORS(app)  # CORS 활성화
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['GENERATED_FOLDER'] = 'generated'
