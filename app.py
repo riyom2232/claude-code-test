@@ -50,7 +50,7 @@ def analyze_product_image(image_path):
         raise ValueError("GOOGLE_API_KEY가 설정되지 않았습니다.")
 
     # Gemini Pro Vision 모델 사용
-    model = genai.GenerativeModel('gemini-nano')
+    model = genai.GenerativeModel('gemini-exp-1206')
 
     # 이미지 로드
     img = Image.open(image_path)
@@ -111,7 +111,7 @@ def generate_image_prompts(analysis, num_images=10):
     if not GOOGLE_API_KEY:
         raise ValueError("GOOGLE_API_KEY가 설정되지 않았습니다.")
 
-    model = genai.GenerativeModel('gemini-nano')
+    model = genai.GenerativeModel('gemini-exp-1206')
 
     prompt = f"""
     다음 제품 정보를 바탕으로 블로그 리뷰용 이미지 생성을 위한 {num_images}개의 다양한 장면/시나리오를 만들어주세요.
