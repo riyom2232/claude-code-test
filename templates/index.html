@@ -125,6 +125,11 @@
             background-color: #fee;
             color: #c33;
             border: 2px solid #fcc;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 13px;
+            max-height: 400px;
+            overflow-y: auto;
         }
         .preview-image {
             max-width: 300px;
@@ -370,15 +375,27 @@
                 
                 const data = await response.json();
                 hideLoading();
-                
+
                 if (response.ok) {
                     displayGeneratedImages(data.generated_images);
                 } else {
-                    showError(data.error || '생성 중 오류가 발생했습니다.');
+                    // 상세한 에러 메시지 표시
+                    let errorMessage = data.error || '생성 중 오류가 발생했습니다.';
+                    if (data.error_type) {
+                        errorMessage += `\n\n오류 유형: ${data.error_type}`;
+                    }
+                    if (data.error_details) {
+                        errorMessage += `\n상세 정보: ${data.error_details}`;
+                    }
+                    errorMessage += `\n\nHTTP 상태: ${response.status}`;
+                    console.error('서버 에러 응답:', data);
+                    showError(errorMessage);
                 }
             } catch (error) {
                 hideLoading();
-                showError('서버와의 통신 중 오류가 발생했습니다: ' + error.message);
+                const errorMessage = `서버와의 통신 중 오류가 발생했습니다.\n\n오류: ${error.message}\n\n개발자 도구(F12)의 Console 탭에서 자세한 정보를 확인하세요.`;
+                console.error('요청 실패:', error);
+                showError(errorMessage);
             }
         });
         
