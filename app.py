@@ -1,6 +1,6 @@
 """
 제품 이미지 생성 웹 애플리케이션
-Google Gemini API를 활용하여 제품 이미지를 분석하고 관련 이미지를 생성합니다.
+Google Gemini 2.5 Flash Image API를 활용하여 제품 이미지를 분석하고 관련 이미지를 생성합니다.
 """
 
 import os
@@ -12,8 +12,8 @@ from flask import Flask, render_template, request, jsonify, send_from_directory
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 import google.generativeai as genai
-from google.cloud import aiplatform
-from vertexai.preview.vision_models import ImageGenerationModel
+from google import genai as genai_client
+from google.genai import types
 from PIL import Image
 import io
 from dotenv import load_dotenv
@@ -36,14 +36,6 @@ Path(app.config['GENERATED_FOLDER']).mkdir(exist_ok=True)
 GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY', '')
 if GOOGLE_API_KEY:
     genai.configure(api_key=GOOGLE_API_KEY)
-
-# Google Cloud Platform 설정 (Imagen API용)
-GCP_PROJECT_ID = os.getenv('GCP_PROJECT_ID', '')
-GCP_LOCATION = os.getenv('GCP_LOCATION', 'us-central1')
-
-# Vertex AI 초기화
-if GCP_PROJECT_ID:
-    aiplatform.init(project=GCP_PROJECT_ID, location=GCP_LOCATION)
 
 
 def allowed_file(filename):
@@ -171,73 +163,87 @@ def generate_image_prompts(analysis, num_images=10):
 
 def generate_images_with_gemini(analysis, prompts):
     """
-    Vertex AI Imagen API를 사용하여 실제 이미지 생성
+    Gemini 2.5 Flash Image API를 사용하여 실제 이미지 생성
     """
-    if not GCP_PROJECT_ID:
-        raise ValueError("GCP_PROJECT_ID가 설정되지 않았습니다. .env 파일을 확인하세요.")
+    if not GOOGLE_API_KEY:
+        raise ValueError("GOOGLE_API_KEY가 설정되지 않았습니다. .env 파일을 확인하세요.")
 
     generated_images = []
 
-    # Imagen 모델 로드
+    # Gemini 클라이언트 초기화
     try:
-        imagen_model = ImageGenerationModel.from_pretrained("imagegeneration@006")
+        client = genai_client.Client(api_key=GOOGLE_API_KEY)
     except Exception as e:
-        # 최신 모델 시도
-        try:
-            imagen_model = ImageGenerationModel.from_pretrained("imagen-3.0-generate-001")
-        except Exception as e2:
-            raise ValueError(f"Imagen 모델을 로드할 수 없습니다. GCP 설정을 확인하세요: {str(e)}")
+        raise ValueError(f"Gemini 클라이언트를 초기화할 수 없습니다: {str(e)}")
 
     for idx, prompt_data in enumerate(prompts):
         try:
             # 이미지 생성
             print(f"이미지 생성 중 ({idx+1}/{len(prompts)}): {prompt_data['title']}")
 
-            response = imagen_model.generate_images(
-                prompt=prompt_data["description"],
-                number_of_images=1,
-                language="ko",  # 한글 프롬프트 지원
-                aspect_ratio="1:1",  # 정사각형 이미지
-                safety_filter_level="block_some",
-                person_generation="allow_adult",
-                add_watermark=False
+            # Gemini 2.5 Flash Image를 사용하여 이미지 생성
+            response = client.models.generate_content(
+                model="gemini-2.5-flash-image",
+                contents=[prompt_data["description"]],
+                config=types.GenerateContentConfig(
+                    response_modalities=["IMAGE"],
+                    image_config=types.ImageConfig(aspect_ratio="1:1")
+                )
             )
 
             # 생성된 이미지 저장
-            if response.images and len(response.images) > 0:
-                image = response.images[0]
+            if response and response.candidates and len(response.candidates) > 0:
+                candidate = response.candidates[0]
 
-                # 타임스탬프와 인덱스로 고유한 파일명 생성
-                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-                filename = f"generated_{timestamp}_{idx+1}.png"
-                filepath = os.path.join(app.config['GENERATED_FOLDER'], filename)
+                # 이미지 데이터 추출
+                image_data = None
+                for part in candidate.content.parts:
+                    if hasattr(part, 'inline_data') and part.inline_data:
+                        image_data = part.inline_data.data
+                        break
 
-                # PIL Image로 변환 후 저장
-                # Vertex AI는 _pil_image 속성 또는 save() 메서드 제공
-                if hasattr(image, '_pil_image'):
-                    image._pil_image.save(filepath, format='PNG')
-                elif hasattr(image, 'save'):
-                    image.save(filepath)
-                else:
-                    # bytes로 저장
-                    image_bytes = image._image_bytes
+                if image_data:
+                    # 타임스탬프와 인덱스로 고유한 파일명 생성
+                    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                    filename = f"generated_{timestamp}_{idx+1}.png"
+                    filepath = os.path.join(app.config['GENERATED_FOLDER'], filename)
+
+                    # base64 디코딩 후 이미지 저장
+                    if isinstance(image_data, str):
+                        # base64 문자열인 경우
+                        image_bytes = base64.b64decode(image_data)
+                    else:
+                        # bytes인 경우
+                        image_bytes = image_data
+
                     pil_image = Image.open(io.BytesIO(image_bytes))
                     pil_image.save(filepath, format='PNG')
 
-                print(f"✓ 이미지 저장 완료: {filename}")
+                    print(f"✓ 이미지 저장 완료: {filename}")
 
-                image_info = {
-                    "id": idx + 1,
-                    "title": prompt_data["title"],
-                    "prompt": prompt_data["description"],
-                    "filename": filename,
-                    "status": "generated",
-                    "url": f"/generated/{filename}",
-                    "message": "이미지 생성 성공"
-                }
-                generated_images.append(image_info)
+                    image_info = {
+                        "id": idx + 1,
+                        "title": prompt_data["title"],
+                        "prompt": prompt_data["description"],
+                        "filename": filename,
+                        "status": "generated",
+                        "url": f"/generated/{filename}",
+                        "message": "이미지 생성 성공"
+                    }
+                    generated_images.append(image_info)
+                else:
+                    print(f"✗ 이미지 생성 실패: 응답에 이미지 데이터가 없습니다.")
+                    image_info = {
+                        "id": idx + 1,
+                        "title": prompt_data["title"],
+                        "prompt": prompt_data["description"],
+                        "filename": None,
+                        "status": "failed",
+                        "message": "이미지 생성에 실패했습니다. (이미지 데이터 없음)"
+                    }
+                    generated_images.append(image_info)
             else:
-                print(f"✗ 이미지 생성 실패: 응답에 이미지가 없습니다.")
+                print(f"✗ 이미지 생성 실패: 응답이 없습니다.")
                 image_info = {
                     "id": idx + 1,
                     "title": prompt_data["title"],
@@ -355,8 +361,7 @@ def health():
     return jsonify({
         'status': 'ok',
         'api_configured': bool(GOOGLE_API_KEY),
-        'gcp_configured': bool(GCP_PROJECT_ID),
-        'imagen_ready': bool(GOOGLE_API_KEY and GCP_PROJECT_ID)
+        'gemini_image_ready': bool(GOOGLE_API_KEY)
     })
 
 
