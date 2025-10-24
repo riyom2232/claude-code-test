@@ -12,8 +12,7 @@ from flask import Flask, render_template, request, jsonify, send_from_directory
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 import google.generativeai as genai
-from google import genai as genai_client
-from google.genai import types
+from google.genai import Client, types
 from PIL import Image
 import io
 from dotenv import load_dotenv
@@ -172,7 +171,7 @@ def generate_images_with_gemini(analysis, prompts):
 
     # Gemini 클라이언트 초기화
     try:
-        client = genai_client.Client(api_key=GOOGLE_API_KEY)
+        client = Client(api_key=GOOGLE_API_KEY)
     except Exception as e:
         raise ValueError(f"Gemini 클라이언트를 초기화할 수 없습니다: {str(e)}")
 
