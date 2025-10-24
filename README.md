@@ -1,18 +1,19 @@
 # 제품 이미지 생성기 🖼️
 
-Google Gemini API와 Vertex AI Imagen을 활용하여 제품 대표 이미지 1장을 분석하고, 블로그 리뷰용 이미지를 최대 10개까지 자동 생성하는 웹 애플리케이션입니다.
+Google Gemini 2.5 Flash Image API를 활용하여 제품 대표 이미지 1장을 분석하고, 블로그 리뷰용 이미지를 최대 10개까지 자동 생성하는 웹 애플리케이션입니다.
 
 ## 주요 기능 ✨
 
 - **제품 이미지 업로드**: 드래그 앤 드롭 또는 파일 선택으로 간편한 업로드
-- **AI 이미지 분석**: Google Gemini API를 통한 제품 자동 분석
+- **AI 이미지 분석**: Google Gemini 2.5 Flash Image를 통한 제품 자동 분석
   - 제품명, 카테고리, 주요 특징 파악
   - 색상, 스타일, 타겟 고객층 식별
   - 사용 사례 및 제품 설명 생성
-- **AI 이미지 생성**: Vertex AI Imagen을 통한 실제 이미지 자동 생성 (최대 10개)
+- **AI 이미지 생성**: Gemini 2.5 Flash Image를 통한 실제 이미지 자동 생성 (최대 10개)
   - 블로그 리뷰에 최적화된 다양한 장면 생성
   - 한글 프롬프트 지원
-  - 고품질 PNG 이미지 출력
+  - 고품질 PNG 이미지 출력 (1:1 aspect ratio)
+  - 2025년 8월 출시된 최신 이미지 생성 모델 사용
 - **쿠팡 파트너스 최적화**: 제품 리뷰 블로그 수익화에 바로 사용 가능
 
 ## 시작하기 🚀
@@ -21,8 +22,6 @@ Google Gemini API와 Vertex AI Imagen을 활용하여 제품 대표 이미지 1�
 
 - Python 3.8 이상
 - Google Gemini API 키 ([발급 받기](https://makersuite.google.com/app/apikey))
-- Google Cloud Platform (GCP) 프로젝트 및 Vertex AI API 활성화
-- GCP 서비스 계정 또는 Application Default Credentials 설정
 
 ### 2. 설치
 
@@ -42,24 +41,8 @@ pip install -r requirements.txt
 ### 3. 환경 변수 설정
 
 ```bash
-# .env 파일 생성
-cp .env.example .env
-
-# .env 파일 편집하여 다음 정보 입력:
+# .env 파일을 편집하여 Google Gemini API 키 입력:
 # GOOGLE_API_KEY=your_gemini_api_key
-# GCP_PROJECT_ID=your_gcp_project_id
-# GCP_LOCATION=us-central1
-# GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account-key.json (선택사항)
-```
-
-**GCP 서비스 계정 설정 (권장)**
-
-```bash
-# GCP 콘솔에서 서비스 계정 생성 후 JSON 키 다운로드
-# Vertex AI User 권한 부여 필요
-
-# 환경 변수 설정
-export GOOGLE_APPLICATION_CREDENTIALS="/path/to/your-service-account-key.json"
 ```
 
 ### 4. 실행
@@ -84,7 +67,7 @@ python app.py
 3. **AI 이미지 생성**
    - 생성할 이미지 개수 선택 (1~10개)
    - "이미지 생성하기" 버튼 클릭
-   - Vertex AI Imagen이 자동으로 블로그 리뷰용 이미지 생성
+   - Gemini 2.5 Flash Image가 자동으로 블로그 리뷰용 이미지 생성
    - 생성된 이미지는 `generated/` 폴더에 PNG 형식으로 저장됨
 
 4. **이미지 다운로드 및 활용**
@@ -109,33 +92,21 @@ claude-code-test/
 
 - **Backend**: Flask (Python)
 - **AI/ML**:
-  - Google Gemini API (gemini-2.5-flash-image) - 이미지 분석 및 프롬프트 생성
-  - Vertex AI Imagen (imagegeneration@006) - 이미지 생성
+  - Google Gemini 2.5 Flash Image - 이미지 분석, 프롬프트 생성 및 이미지 생성
+  - 2025년 8월 출시된 최신 이미지 생성 모델
 - **Frontend**: HTML5, CSS3, JavaScript (Vanilla)
 - **이미지 처리**: Pillow
-- **클라우드**: Google Cloud Platform (Vertex AI)
 
 ## API 키 발급 방법 🔑
 
-### 1. Google Gemini API 키
+### Google Gemini API 키
 
 1. [Google AI Studio](https://makersuite.google.com/app/apikey) 접속
 2. Google 계정으로 로그인
 3. "Create API Key" 클릭
 4. 생성된 키를 복사하여 `.env` 파일에 입력
 
-### 2. Google Cloud Platform 설정
-
-1. [GCP Console](https://console.cloud.google.com/) 접속
-2. 새 프로젝트 생성 또는 기존 프로젝트 선택
-3. Vertex AI API 활성화:
-   - API 및 서비스 > 라이브러리 > "Vertex AI API" 검색 > 사용 설정
-4. 서비스 계정 생성:
-   - IAM 및 관리 > 서비스 계정 > 서비스 계정 만들기
-   - 역할: "Vertex AI User" 권한 부여
-   - JSON 키 파일 다운로드
-5. 프로젝트 ID를 `.env` 파일에 입력
-6. JSON 키 파일 경로를 `GOOGLE_APPLICATION_CREDENTIALS` 환경변수에 설정
+**참고**: Gemini 2.5 Flash Image는 Google Gemini API를 통해 사용할 수 있으며, 별도의 GCP 설정이 필요하지 않습니다.
 
 ## 문제 해결 🔧
 
