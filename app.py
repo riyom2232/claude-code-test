@@ -164,6 +164,7 @@ def generate_image_prompts(analysis, num_images=10):
 def generate_images_with_gemini(analysis, prompts):
     """
     Gemini 2.5 Flash Image API를 사용하여 실제 이미지 생성
+    통일된 응답 스키마: {"status":"ok|error", "type":"base64|url", "data":"..."}
     """
     if not GOOGLE_API_KEY:
         raise ValueError("GOOGLE_API_KEY가 설정되지 않았습니다. .env 파일을 확인하세요.")
@@ -191,7 +192,7 @@ def generate_images_with_gemini(analysis, prompts):
                 )
             )
 
-            # 생성된 이미지 저장
+            # 생성된 이미지 처리
             if response and response.candidates and len(response.candidates) > 0:
                 candidate = response.candidates[0]
 
@@ -203,32 +204,26 @@ def generate_images_with_gemini(analysis, prompts):
                         break
 
                 if image_data:
-                    # 타임스탬프와 인덱스로 고유한 파일명 생성
-                    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-                    filename = f"generated_{timestamp}_{idx+1}.png"
-                    filepath = os.path.join(app.config['GENERATED_FOLDER'], filename)
-
-                    # base64 디코딩 후 이미지 저장
-                    if isinstance(image_data, str):
-                        # base64 문자열인 경우
-                        image_bytes = base64.b64decode(image_data)
+                    # bytes를 base64로 인코딩
+                    if isinstance(image_data, bytes):
+                        # bytes인 경우 base64로 인코딩
+                        base64_image = base64.b64encode(image_data).decode('utf-8')
                     else:
-                        # bytes인 경우
-                        image_bytes = image_data
+                        # 이미 base64 문자열인 경우
+                        base64_image = image_data
 
-                    pil_image = Image.open(io.BytesIO(image_bytes))
-                    pil_image.save(filepath, format='PNG')
+                    # data URI 형식으로 변환
+                    data_uri = f"data:image/png;base64,{base64_image}"
 
-                    print(f"✓ 이미지 저장 완료: {filename}")
+                    print(f"✓ 이미지 생성 완료 ({idx+1}/{len(prompts)})")
 
                     image_info = {
                         "id": idx + 1,
                         "title": prompt_data["title"],
                         "prompt": prompt_data["description"],
-                        "filename": filename,
-                        "status": "generated",
-                        "url": f"/generated/{filename}",
-                        "message": "이미지 생성 성공"
+                        "status": "ok",
+                        "type": "base64",
+                        "data": data_uri
                     }
                     generated_images.append(image_info)
                 else:
@@ -237,8 +232,7 @@ def generate_images_with_gemini(analysis, prompts):
                         "id": idx + 1,
                         "title": prompt_data["title"],
                         "prompt": prompt_data["description"],
-                        "filename": None,
-                        "status": "failed",
+                        "status": "error",
                         "message": "이미지 생성에 실패했습니다. (이미지 데이터 없음)"
                     }
                     generated_images.append(image_info)
@@ -248,8 +242,7 @@ def generate_images_with_gemini(analysis, prompts):
                     "id": idx + 1,
                     "title": prompt_data["title"],
                     "prompt": prompt_data["description"],
-                    "filename": None,
-                    "status": "failed",
+                    "status": "error",
                     "message": "이미지 생성에 실패했습니다. (응답 없음)"
                 }
                 generated_images.append(image_info)
@@ -261,7 +254,6 @@ def generate_images_with_gemini(analysis, prompts):
                 "id": idx + 1,
                 "title": prompt_data["title"],
                 "prompt": prompt_data["description"],
-                "filename": None,
                 "status": "error",
                 "message": f"오류 발생: {str(e)}"
             }
