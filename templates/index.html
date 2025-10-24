@@ -36,8 +36,35 @@
             margin-bottom: 40px;
             font-size: 1.1em;
         }
+        .upload-section {
+            margin-bottom: 30px;
+        }
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            background: #f9f9ff;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .upload-area:hover {
+            background: #f0f0ff;
+            border-color: #764ba2;
+        }
+        .upload-area.dragover {
+            background: #e8e8ff;
+            border-color: #764ba2;
+        }
+        input[type="file"] {
+            display: none;
+        }
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
         .form-group {
-            margin-bottom: 25px;
+            margin-bottom: 20px;
         }
         label {
             display: block;
@@ -45,25 +72,12 @@
             font-weight: 600;
             color: #333;
         }
-        input[type="text"],
-        textarea,
-        select {
+        input[type="number"] {
             width: 100%;
             padding: 12px;
             border: 2px solid #e0e0e0;
             border-radius: 8px;
             font-size: 14px;
-            transition: border-color 0.3s;
-        }
-        input[type="text"]:focus,
-        textarea:focus,
-        select:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-        textarea {
-            resize: vertical;
-            min-height: 100px;
         }
         button {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -74,21 +88,20 @@
             font-size: 16px;
             font-weight: 600;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: transform 0.2s;
             width: 100%;
         }
         button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
         }
-        button:active {
-            transform: translateY(0);
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
         }
         .loading {
             display: none;
             text-align: center;
             padding: 20px;
-            font-size: 18px;
             color: #667eea;
         }
         .spinner {
@@ -104,33 +117,30 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        .error-message,
-        .success-message {
+        .error-message {
             display: none;
             padding: 15px;
             border-radius: 8px;
             margin-bottom: 20px;
-            font-weight: 500;
-        }
-        .error-message {
             background-color: #fee;
             color: #c33;
             border: 2px solid #fcc;
         }
-        .success-message {
-            background-color: #efe;
-            color: #3c3;
-            border: 2px solid #cfc;
+        .preview-image {
+            max-width: 300px;
+            margin: 20px auto;
+            display: none;
+            border-radius: 8px;
+        }
+        .preview-image img {
+            width: 100%;
+            border-radius: 8px;
         }
         .generated-section {
             display: none;
             margin-top: 40px;
             padding-top: 40px;
             border-top: 2px solid #e0e0e0;
-        }
-        .generated-section h2 {
-            margin-bottom: 20px;
-            color: #333;
         }
         .generated-grid {
             display: grid;
@@ -143,85 +153,152 @@
             padding: 15px;
             background: #f9f9f9;
         }
-        .generated-item-content {
-            margin-bottom: 10px;
-        }
         .generated-item-title {
             font-weight: 600;
-            font-size: 16px;
             margin-bottom: 8px;
             color: #333;
         }
         .generated-item-prompt {
             font-size: 14px;
             color: #666;
-            margin-bottom: 8px;
             line-height: 1.4;
-        }
-        .generated-item-status {
-            display: inline-block;
-            padding: 4px 8px;
-            background: #667eea;
-            color: white;
-            border-radius: 4px;
-            font-size: 12px;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🎨 제품 이미지 생성기</h1>
-        <p class="subtitle">블로그 리뷰용 제품 이미지를 AI로 자동 생성합니다</p>
+        <p class="subtitle">제품 이미지를 업로드하면 AI가 자동으로 1~10장의 블로그 리뷰용 이미지 프롬프트를 생성합니다</p>
         
         <div class="error-message" id="errorMessage"></div>
-        <div class="success-message" id="successMessage"></div>
         
-        <form id="generateForm">
-            <div class="form-group">
-                <label for="productName">제품명</label>
-                <input type="text" id="productName" name="productName" required 
-                       placeholder="예: 스마트 무선 이어폰">
+        <div class="upload-section">
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-icon">📸</div>
+                <h3>제품 이미지를 업로드하세요</h3>
+                <p>클릭하거나 드래그 앤 드롭</p>
+                <p style="font-size: 0.9em; color: #999; margin-top: 10px;">지원 형식: PNG, JPG, JPEG, WEBP (최대 16MB)</p>
             </div>
-            
-            <div class="form-group">
-                <label for="productDescription">제품 설명</label>
-                <textarea id="productDescription" name="productDescription" required
-                          placeholder="제품의 주요 특징과 디자인을 설명해주세요..."></textarea>
-            </div>
-            
-            <div class="form-group">
-                <label for="imageStyle">이미지 스타일</label>
-                <select id="imageStyle" name="imageStyle">
-                    <option value="professional">프로페셔널 스튜디오</option>
-                    <option value="lifestyle">라이프스타일</option>
-                    <option value="minimalist">미니멀리스트</option>
-                    <option value="vibrant">생동감 넘치는</option>
-                </select>
-            </div>
-            
-            <button type="submit">🚀 이미지 생성하기</button>
-        </form>
+            <input type="file" id="fileInput" accept="image/png,image/jpeg,image/jpg,image/webp">
+        </div>
+        
+        <div class="preview-image" id="previewImage">
+            <img src="" alt="미리보기" id="preview">
+        </div>
+        
+        <div class="form-group" id="numImagesGroup" style="display: none;">
+            <label for="numImages">생성할 이미지 개수 (1-10):</label>
+            <input type="number" id="numImages" min="1" max="10" value="10">
+        </div>
+        
+        <button id="generateBtn" style="display: none;">🚀 이미지 프롬프트 생성하기</button>
         
         <div class="loading" id="loading">
             <div class="spinner"></div>
-            <p>AI가 이미지를 생성하고 있습니다...</p>
+            <p>AI가 이미지를 분석하고 프롬프트를 생성하고 있습니다...</p>
         </div>
         
         <div class="generated-section" id="generatedSection">
-            <h2>생성된 프롬프트</h2>
+            <h2>📝 생성된 이미지 프롬프트</h2>
             <div class="generated-grid" id="generatedGrid"></div>
         </div>
     </div>
+    
     <script>
-        const form = document.getElementById('generateForm');
-        form.addEventListener('submit', async (e) => {
+        let uploadedFilename = null;
+        
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const generateBtn = document.getElementById('generateBtn');
+        const numImagesGroup = document.getElementById('numImagesGroup');
+        const previewImage = document.getElementById('previewImage');
+        const preview = document.getElementById('preview');
+        
+        // 업로드 영역 클릭
+        uploadArea.addEventListener('click', () => fileInput.click());
+        
+        // 드래그 앤 드롭
+        uploadArea.addEventListener('dragover', (e) => {
             e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+        
+        // 파일 선택
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+        
+        // 파일 처리
+        async function handleFile(file) {
+            if (!file.type.startsWith('image/')) {
+                showError('이미지 파일만 업로드할 수 있습니다.');
+                return;
+            }
             
-            const formData = {
-                productName: document.getElementById('productName').value,
-                productDescription: document.getElementById('productDescription').value,
-                imageStyle: document.getElementById('imageStyle').value
+            // 미리보기
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                preview.src = e.target.result;
+                previewImage.style.display = 'block';
             };
+            reader.readAsDataURL(file);
+            
+            // 파일 업로드
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            showLoading();
+            hideError();
+            
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                hideLoading();
+                
+                if (response.ok) {
+                    uploadedFilename = data.filename;
+                    generateBtn.style.display = 'block';
+                    numImagesGroup.style.display = 'block';
+                } else {
+                    showError(data.error || '업로드 중 오류가 발생했습니다.');
+                }
+            } catch (error) {
+                hideLoading();
+                showError('서버와의 통신 중 오류가 발생했습니다: ' + error.message);
+            }
+        }
+        
+        // 생성 버튼 클릭
+        generateBtn.addEventListener('click', async () => {
+            if (!uploadedFilename) {
+                showError('먼저 이미지를 업로드해주세요.');
+                return;
+            }
+            
+            const numImages = parseInt(document.getElementById('numImages').value);
+            if (numImages < 1 || numImages > 10) {
+                showError('이미지 개수는 1-10 사이여야 합니다.');
+                return;
+            }
             
             showLoading();
             hideError();
@@ -232,23 +309,26 @@
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify(formData)
+                    body: JSON.stringify({
+                        filename: uploadedFilename,
+                        num_images: numImages
+                    })
                 });
                 
                 const data = await response.json();
                 hideLoading();
                 
                 if (response.ok) {
-                    showSuccess('프롬프트가 성공적으로 생성되었습니다!');
-                    displayGeneratedImages(data.images);
+                    displayGeneratedImages(data.generated_images);
                 } else {
-                    showError(data.error || '오류가 발생했습니다.');
+                    showError(data.error || '생성 중 오류가 발생했습니다.');
                 }
             } catch (error) {
                 hideLoading();
                 showError('서버와의 통신 중 오류가 발생했습니다: ' + error.message);
             }
         });
+        
         function displayGeneratedImages(images) {
             const generatedGrid = document.getElementById('generatedGrid');
             const generatedSection = document.getElementById('generatedSection');
@@ -257,45 +337,37 @@
             images.forEach(img => {
                 html += `
                     <div class="generated-item">
-                        <div class="generated-item-content">
-                            <div class="generated-item-title">${img.title}</div>
-                            <div class="generated-item-prompt">${img.prompt}</div>
-                            <div class="generated-item-status">${img.status === 'prompt_ready' ? '프롬프트 준비됨' : '생성됨'}</div>
-                            ${img.message ? `<p style="margin-top: 10px; color: #999; font-size: 0.85em;">${img.message}</p>` : ''}
-                        </div>
+                        <div class="generated-item-title">${img.id}. ${img.title}</div>
+                        <div class="generated-item-prompt">${img.prompt}</div>
+                        ${img.message ? `<p style="margin-top: 10px; color: #999; font-size: 0.85em;">${img.message}</p>` : ''}
                     </div>
                 `;
             });
             generatedGrid.innerHTML = html;
             generatedSection.style.display = 'block';
         }
-        // UI 헬퍼 함수
+        
         function showLoading() {
             document.getElementById('loading').style.display = 'block';
         }
+        
         function hideLoading() {
             document.getElementById('loading').style.display = 'none';
         }
+        
         function showError(message) {
             const errorDiv = document.getElementById('errorMessage');
             errorDiv.textContent = message;
             errorDiv.style.display = 'block';
-            // 오류 메시지를 60초 동안 표시 (사용자가 충분히 읽을 수 있도록)
             setTimeout(() => {
                 errorDiv.style.display = 'none';
             }, 60000);
         }
+        
         function hideError() {
             document.getElementById('errorMessage').style.display = 'none';
         }
-        function showSuccess(message) {
-            const successDiv = document.getElementById('successMessage');
-            successDiv.textContent = message;
-            successDiv.style.display = 'block';
-            setTimeout(() => {
-                successDiv.style.display = 'none';
-            }, 3000);
-        }
+        
         // 페이지 로드 시 API 상태 체크
         fetch('/health')
             .then(response => response.json())
