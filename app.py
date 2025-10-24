@@ -49,13 +49,22 @@ def analyze_product_image(image_path):
     Gemini API를 사용하여 제품 이미지 분석
     """
     if not GOOGLE_API_KEY:
-        raise ValueError("GOOGLE_API_KEY가 설정되지 않았습니다.")
+        error_msg = "GOOGLE_API_KEY가 설정되지 않았습니다."
+        print(f"[ERROR] {error_msg}")
+        raise ValueError(error_msg)
 
-    # Gemini Pro Vision 모델 사용
-    model = genai.GenerativeModel('gemini-2.5-flash-image')
+    try:
+        # Gemini Pro Vision 모델 사용
+        print(f"[DEBUG] 분석 모델 초기화: gemini-2.5-flash-image")
+        model = genai.GenerativeModel('gemini-2.5-flash-image')
 
-    # 이미지 로드
-    img = Image.open(image_path)
+        # 이미지 로드
+        print(f"[DEBUG] 이미지 로드 중: {image_path}")
+        img = Image.open(image_path)
+        print(f"[DEBUG] 이미지 크기: {img.size}")
+    except Exception as e:
+        print(f"[ERROR] 이미지 로드 실패: {str(e)}")
+        raise
 
     # 이미지 분석 프롬프트
     prompt = """
@@ -76,12 +85,21 @@ def analyze_product_image(image_path):
     응답은 반드시 유효한 JSON 형식으로만 작성해주세요.
     """
 
-    response = model.generate_content([prompt, img])
+    print(f"[DEBUG] 이미지 분석 API 호출 중...")
+    try:
+        response = model.generate_content([prompt, img])
+        print(f"[DEBUG] 분석 응답 수신 완료")
+    except Exception as e:
+        print(f"[ERROR] 이미지 분석 API 호출 실패: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise
 
     # JSON 파싱
     try:
         # 응답에서 JSON 추출 (마크다운 코드 블록 제거)
         response_text = response.text.strip()
+        print(f"[DEBUG] 응답 텍스트 길이: {len(response_text)}")
         if response_text.startswith('```json'):
             response_text = response_text[7:]
         if response_text.startswith('```'):
@@ -90,8 +108,11 @@ def analyze_product_image(image_path):
             response_text = response_text[:-3]
 
         analysis = json.loads(response_text.strip())
-    except json.JSONDecodeError:
+        print(f"[DEBUG] JSON 파싱 성공")
+    except json.JSONDecodeError as e:
         # JSON 파싱 실패 시 기본값 반환
+        print(f"[WARNING] JSON 파싱 실패, 기본값 사용: {str(e)}")
+        print(f"[DEBUG] 원본 응답: {response.text[:500]}")
         analysis = {
             "product_name": "분석된 제품",
             "category": "일반 제품",
@@ -111,8 +132,11 @@ def generate_image_prompts(analysis, num_images=10):
     제품 분석 결과를 바탕으로 다양한 이미지 생성 프롬프트 생성
     """
     if not GOOGLE_API_KEY:
-        raise ValueError("GOOGLE_API_KEY가 설정되지 않았습니다.")
+        error_msg = "GOOGLE_API_KEY가 설정되지 않았습니다."
+        print(f"[ERROR] {error_msg}")
+        raise ValueError(error_msg)
 
+    print(f"[DEBUG] 프롬프트 생성 모델 초기화")
     model = genai.GenerativeModel('gemini-2.5-flash-image')
 
     prompt = f"""
@@ -140,7 +164,15 @@ def generate_image_prompts(analysis, num_images=10):
     }}
     """
 
-    response = model.generate_content(prompt)
+    print(f"[DEBUG] 프롬프트 생성 API 호출 중...")
+    try:
+        response = model.generate_content(prompt)
+        print(f"[DEBUG] 프롬프트 생성 응답 수신 완료")
+    except Exception as e:
+        print(f"[ERROR] 프롬프트 생성 API 호출 실패: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise
 
     try:
         response_text = response.text.strip()
@@ -152,9 +184,11 @@ def generate_image_prompts(analysis, num_images=10):
             response_text = response_text[:-3]
 
         prompts_data = json.loads(response_text.strip())
+        print(f"[DEBUG] 프롬프트 JSON 파싱 성공 - {len(prompts_data['prompts'])}개 생성")
         return prompts_data['prompts'][:num_images]
-    except (json.JSONDecodeError, KeyError):
+    except (json.JSONDecodeError, KeyError) as e:
         # 기본 프롬프트 생성
+        print(f"[WARNING] 프롬프트 JSON 파싱 실패, 기본 프롬프트 사용: {str(e)}")
         return [
             {"title": f"제품 사용 장면 {i+1}", "description": f"{analysis['product_name']}을(를) 사용하는 모습"}
             for i in range(num_images)
@@ -167,22 +201,32 @@ def generate_images_with_gemini(analysis, prompts):
     통일된 응답 스키마: {"status":"ok|error", "type":"base64|url", "data":"..."}
     """
     if not GOOGLE_API_KEY:
-        raise ValueError("GOOGLE_API_KEY가 설정되지 않았습니다. .env 파일을 확인하세요.")
+        error_msg = "GOOGLE_API_KEY가 설정되지 않았습니다. .env 파일을 확인하세요."
+        print(f"[ERROR] {error_msg}")
+        raise ValueError(error_msg)
 
     generated_images = []
 
     # Gemini 클라이언트 초기화
     try:
+        print(f"[INFO] Gemini 클라이언트 초기화 중...")
         client = genai_client.Client(api_key=GOOGLE_API_KEY)
+        print(f"[INFO] Gemini 클라이언트 초기화 완료")
     except Exception as e:
-        raise ValueError(f"Gemini 클라이언트를 초기화할 수 없습니다: {str(e)}")
+        error_msg = f"Gemini 클라이언트를 초기화할 수 없습니다: {str(e)}"
+        print(f"[ERROR] {error_msg}")
+        import traceback
+        traceback.print_exc()
+        raise ValueError(error_msg)
 
     for idx, prompt_data in enumerate(prompts):
         try:
             # 이미지 생성
-            print(f"이미지 생성 중 ({idx+1}/{len(prompts)}): {prompt_data['title']}")
+            print(f"[INFO] 이미지 생성 중 ({idx+1}/{len(prompts)}): {prompt_data['title']}")
+            print(f"[DEBUG] 프롬프트: {prompt_data['description'][:100]}...")
 
             # Gemini 2.5 Flash Image를 사용하여 이미지 생성
+            print(f"[DEBUG] API 호출 중 - 모델: gemini-2.5-flash-image")
             response = client.models.generate_content(
                 model="gemini-2.5-flash-image",
                 contents=[prompt_data["description"]],
@@ -191,6 +235,7 @@ def generate_images_with_gemini(analysis, prompts):
                     image_config=types.ImageConfig(aspect_ratio="1:1")
                 )
             )
+            print(f"[DEBUG] API 응답 수신 완료")
 
             # 생성된 이미지 처리
             if response and response.candidates and len(response.candidates) > 0:
@@ -249,13 +294,20 @@ def generate_images_with_gemini(analysis, prompts):
 
         except Exception as e:
             # 개별 이미지 생성 오류
-            print(f"✗ 이미지 생성 오류 ({idx+1}): {str(e)}")
+            error_type = type(e).__name__
+            error_msg = str(e)
+            print(f"[ERROR] 이미지 생성 오류 ({idx+1}/{len(prompts)})")
+            print(f"[ERROR] 오류 유형: {error_type}")
+            print(f"[ERROR] 오류 메시지: {error_msg}")
+            import traceback
+            traceback.print_exc()
+
             image_info = {
                 "id": idx + 1,
                 "title": prompt_data["title"],
                 "prompt": prompt_data["description"],
                 "status": "error",
-                "message": f"오류 발생: {str(e)}"
+                "message": f"{error_type}: {error_msg}"
             }
             generated_images.append(image_info)
 
@@ -311,19 +363,30 @@ def generate_images():
     num_images = min(int(data.get('num_images', 10)), 10)
 
     if not filename:
-        return jsonify({'error': '파일명이 필요합니다.'}), 400
+        error_msg = '파일명이 필요합니다.'
+        print(f"[ERROR] {error_msg}")
+        return jsonify({'error': error_msg}), 400
 
     try:
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        print(f"[INFO] 이미지 생성 시작 - 파일: {filename}, 개수: {num_images}")
 
         # 이미지 분석
+        print(f"[INFO] 1단계: 이미지 분석 중...")
         analysis = analyze_product_image(filepath)
+        print(f"[INFO] 이미지 분석 완료 - 제품: {analysis.get('product_name', 'Unknown')}")
 
         # 프롬프트 생성
+        print(f"[INFO] 2단계: 프롬프트 생성 중...")
         prompts = generate_image_prompts(analysis, num_images)
+        print(f"[INFO] 프롬프트 생성 완료 - {len(prompts)}개")
 
-        # 이미지 생성 (현재는 프롬프트만 반환)
+        # 이미지 생성
+        print(f"[INFO] 3단계: AI 이미지 생성 중... (시간이 걸릴 수 있습니다)")
         generated = generate_images_with_gemini(analysis, prompts)
+
+        success_count = sum(1 for img in generated if img.get('status') == 'ok')
+        print(f"[INFO] 이미지 생성 완료 - 성공: {success_count}/{len(generated)}")
 
         return jsonify({
             'success': True,
@@ -331,8 +394,22 @@ def generate_images():
             'generated_images': generated
         })
 
+    except ValueError as e:
+        error_msg = f'설정 오류: {str(e)}'
+        print(f"[ERROR] {error_msg}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': error_msg}), 500
     except Exception as e:
-        return jsonify({'error': f'오류 발생: {str(e)}'}), 500
+        error_msg = f'이미지 생성 중 오류 발생: {str(e)}'
+        print(f"[ERROR] {error_msg}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'error': error_msg,
+            'error_type': type(e).__name__,
+            'error_details': str(e)
+        }), 500
 
 
 @app.route('/uploads/<filename>')
