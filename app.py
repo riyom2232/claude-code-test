@@ -241,12 +241,44 @@ def generate_images_with_gemini(analysis, prompts):
             if response and response.candidates and len(response.candidates) > 0:
                 candidate = response.candidates[0]
 
+                # finish_reason 로깅
+                finish_reason = getattr(candidate, 'finish_reason', 'UNKNOWN')
+                print(f"[DEBUG] Finish reason: {finish_reason}")
+
+                # Safety ratings 로깅
+                if hasattr(candidate, 'safety_ratings') and candidate.safety_ratings:
+                    print(f"[DEBUG] Safety ratings:")
+                    for rating in candidate.safety_ratings:
+                        print(f"  - {rating.category}: {rating.probability}")
+
+                # content가 None인지 체크
+                if not candidate.content:
+                    error_msg = f"콘텐츠가 생성되지 않았습니다. Finish reason: {finish_reason}"
+                    print(f"[WARNING] {error_msg}")
+
+                    # Safety filter로 차단되었는지 확인
+                    if 'SAFETY' in str(finish_reason):
+                        error_msg = "안전 필터에 의해 차단되었습니다. 프롬프트를 수정해주세요."
+
+                    image_info = {
+                        "id": idx + 1,
+                        "title": prompt_data["title"],
+                        "prompt": prompt_data["description"],
+                        "status": "error",
+                        "message": error_msg
+                    }
+                    generated_images.append(image_info)
+                    continue
+
                 # 이미지 데이터 추출
                 image_data = None
-                for part in candidate.content.parts:
-                    if hasattr(part, 'inline_data') and part.inline_data:
-                        image_data = part.inline_data.data
-                        break
+                if hasattr(candidate.content, 'parts') and candidate.content.parts:
+                    for part in candidate.content.parts:
+                        if hasattr(part, 'inline_data') and part.inline_data:
+                            image_data = part.inline_data.data
+                            break
+                else:
+                    print(f"[WARNING] Content에 parts가 없습니다.")
 
                 if image_data:
                     # bytes를 base64로 인코딩
