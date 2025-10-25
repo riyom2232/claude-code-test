@@ -195,8 +195,7 @@ def generate_image_prompts(analysis, num_images=10):
         ]
 
 
-def generate_images_with_gemini(analysis, prompts):
-    """
+def generate_images_with_gemini(analysis, prompts, image_path):    """
     Gemini 2.5 Flash Image API를 사용하여 실제 이미지 생성
     통일된 응답 스키마: {"status":"ok|error", "type":"base64|url", "data":"..."}
     """
@@ -219,6 +218,11 @@ def generate_images_with_gemini(analysis, prompts):
         traceback.print_exc()
         raise ValueError(error_msg)
 
+
+    # 원본 이미지 로드 (시각적 참조용)
+    print(f"[INFO] 원본 제품 이미지 로드: {image_path}")
+    original_product_image = Image.open(image_path)
+    print(f"[INFO] 원본 이미지 크기: {original_product_image.size}")
     for idx, prompt_data in enumerate(prompts):
         try:
             # 이미지 생성
@@ -229,8 +233,11 @@ def generate_images_with_gemini(analysis, prompts):
             print(f"[DEBUG] API 호출 중 - 모델: gemini-2.5-flash-image")
             response = client.models.generate_content(
                 model="gemini-2.5-flash-image",
-                contents=[prompt_data["description"]],
-                config=types.GenerateContentConfig(
+                contents=[
+                    "이 제품 이미지와 동일한 디자인을 유지하면서 다음 장면을 생성해주세요:",
+                    original_product_image,
+                    f"장면 설명: {prompt_data['description']}"
+                ],                config=types.GenerateContentConfig(
                     response_modalities=["IMAGE"],
                     image_config=types.ImageConfig(aspect_ratio="1:1")
                 )
@@ -415,8 +422,7 @@ def generate_images():
 
         # 이미지 생성
         print(f"[INFO] 3단계: AI 이미지 생성 중... (시간이 걸릴 수 있습니다)")
-        generated = generate_images_with_gemini(analysis, prompts)
-
+        generated = generate_images_with_gemini(analysis, prompts, filepath)
         success_count = sum(1 for img in generated if img.get('status') == 'ok')
         print(f"[INFO] 이미지 생성 완료 - 성공: {success_count}/{len(generated)}")
 
