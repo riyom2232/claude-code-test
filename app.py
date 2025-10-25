@@ -195,7 +195,8 @@ def generate_image_prompts(analysis, num_images=10):
         ]
 
 
-def generate_images_with_gemini(analysis, prompts, image_path):    """
+def generate_images_with_gemini(analysis, prompts, image_path):
+    """
     Gemini 2.5 Flash Image API를 사용하여 실제 이미지 생성
     통일된 응답 스키마: {"status":"ok|error", "type":"base64|url", "data":"..."}
     """
@@ -237,7 +238,8 @@ def generate_images_with_gemini(analysis, prompts, image_path):    """
                     "이 제품 이미지와 동일한 디자인을 유지하면서 다음 장면을 생성해주세요:",
                     original_product_image,
                     f"장면 설명: {prompt_data['description']}"
-                ],                config=types.GenerateContentConfig(
+                ],
+                config=types.GenerateContentConfig(
                     response_modalities=["IMAGE"],
                     image_config=types.ImageConfig(aspect_ratio="1:1")
                 )
