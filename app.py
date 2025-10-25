@@ -195,7 +195,8 @@ def generate_image_prompts(analysis, num_images=10):
         ]
 
 
-def generate_images_with_gemini(analysis, prompts, image_path):    """
+def generate_images_with_gemini(analysis, prompts, image_path):
+    """
     Gemini 2.5 Flash Image API를 사용하여 실제 이미지 생성
     통일된 응답 스키마: {"status":"ok|error", "type":"base64|url", "data":"..."}
     """
